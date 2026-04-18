@@ -1,0 +1,22 @@
+services:
+  mqttapi:
+    image: diatar-mqttapi
+    build:
+      context: .
+      dockerfile: src/MqttApi/Dockerfile
+    ports:
+      - "80:8080"
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - Mqtt__Host=${MQTT_HOST}
+      - Mqtt__AdminUsername=${MQTT_ADMIN_USERNAME}
+      - Mqtt__AdminPassword=${MQTT_ADMIN_PASSWORD}
+      - Email__Host=${EMAIL_HOST}
+      - Email__Port=${EMAIL_PORT}
+      - Email__Username=${EMAIL_USERNAME}
+      - Email__Password=${EMAIL_PASSWORD}
+      - Email__EnableSsl=${EMAIL_ENABLE_SSL}
+      - Email__FromAddress=${EMAIL_FROM_ADDRESS}
+      - Email__FromName=${EMAIL_FROM_NAME}
+      - Email__BaseUrl=${EMAIL_BASE_URL}
+    restart: unless-stopped
