@@ -19,6 +19,7 @@ public static class UserEndpoints
         group.MapPost("/change-password", ChangePasswordAsync).WithSummary("Change password (requires current password)");
         group.MapPost("/change-email", ChangeEmailAsync).WithSummary("Change email (requires password, sends verification)");
         group.MapPost("/change-username", ChangeUsernameAsync).WithSummary("Change username (requires current password)");
+        group.MapGet("/list", ListUsersAsync).WithSummary("List all registered MQTT usernames");
     }
 
     private static async Task<IResult> CreateUserAsync(CreateUserRequest req, IDynsecService dynsec, IEmailService email)
@@ -173,6 +174,17 @@ public static class UserEndpoints
         }
         catch (KeyNotFoundException ex) { return Results.NotFound(ApiResponse.Fail(ex.Message)); }
         catch (InvalidOperationException ex) { return Results.Conflict(ApiResponse.Fail(ex.Message)); }
+        catch (OperationCanceledException) { return Results.StatusCode(503); }
+        catch (Exception ex) { return Results.Problem(ex.Message); }
+    }
+
+    private static async Task<IResult> ListUsersAsync(IDynsecService dynsec)
+    {
+        try
+        {
+            var names = await dynsec.ListClientNamesAsync();
+            return Results.Ok(ApiResponse.Ok("Users retrieved successfully.", data: names));
+        }
         catch (OperationCanceledException) { return Results.StatusCode(503); }
         catch (Exception ex) { return Results.Problem(ex.Message); }
     }
