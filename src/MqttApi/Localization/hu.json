@@ -1,0 +1,28 @@
+{
+  "verify_email_subject": "Erősítse meg fiókját",
+  "verify_email_greeting": "Szia <strong>{0}</strong>,",
+  "verify_email_intro": "Fiókja sikeresen létrejött. Kérjük, erősítse meg e-mail címét az alábbi linkre kattintva:",
+  "verify_email_button": "Megerősítés",
+  "verify_email_disclaimer": "Ha nem Ön hozta létre ezt a fiókot, hagyja figyelmen kívül ezt az e-mailt.",
+
+  "user_created": "Felhasználó létrehozva. Megerősítő e-mail elküldve.",
+  "email_updated": "E-mail cím frissítve. Megerősítő e-mail elküldve az új címre.",
+  "user_deleted": "Felhasználó sikeresen törölve.",
+  "password_updated": "Jelszó sikeresen frissítve.",
+  "username_updated": "Felhasználónév sikeresen frissítve.",
+  "users_retrieved": "Felhasználók sikeresen lekérve.",
+
+  "username_taken": "A(z) '{0}' felhasználónév már foglalt.",
+  "email_in_use": "A(z) '{0}' e-mail cím már használatban van.",
+  "user_not_found": "A(z) '{0}' felhasználó nem található.",
+
+  "resend_verification_sent": "Ha a fiók létezik és nincs megerősítve, egy új megerősítő e-mail lett elküldve.",
+  "missing_username_or_token": "Hiányzó felhasználónév vagy token.",
+  "verification_link_invalid": "Érvénytelen vagy lejárt megerősítő hivatkozás.",
+  "service_unavailable": "A szolgáltatás nem elérhető. Kérjük, próbálja újra később.",
+
+  "account_verified_title": "Fiók megerősítve",
+  "account_verified_message": "Fiókja sikeresen megerősítve! Most már bejelentkezhet.",
+  "verification_failed_title": "Megerősítés sikertelen",
+  "error_title": "Hiba"
+}

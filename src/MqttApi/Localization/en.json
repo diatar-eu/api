@@ -1,0 +1,28 @@
+{
+  "verify_email_subject": "Verify your account",
+  "verify_email_greeting": "Hello <strong>{0}</strong>,",
+  "verify_email_intro": "Your account has been created. Please verify your email address by clicking the link below:",
+  "verify_email_button": "Click to Verify",
+  "verify_email_disclaimer": "If you did not request this account, you can ignore this email.",
+
+  "user_created": "User created. A verification email has been sent.",
+  "email_updated": "Email updated. A verification email has been sent to the new address.",
+  "user_deleted": "User deleted successfully.",
+  "password_updated": "Password updated successfully.",
+  "username_updated": "Username updated successfully.",
+  "users_retrieved": "Users retrieved successfully.",
+
+  "username_taken": "Username '{0}' is already taken.",
+  "email_in_use": "Email '{0}' is already in use.",
+  "user_not_found": "User '{0}' not found.",
+
+  "resend_verification_sent": "If the account exists and is unverified, a new verification email has been sent.",
+  "missing_username_or_token": "Missing username or token.",
+  "verification_link_invalid": "Invalid or expired verification link.",
+  "service_unavailable": "Service unavailable. Please try again later.",
+
+  "account_verified_title": "Account Verified",
+  "account_verified_message": "Your account has been verified! You can now log in.",
+  "verification_failed_title": "Verification Failed",
+  "error_title": "Error"
+}

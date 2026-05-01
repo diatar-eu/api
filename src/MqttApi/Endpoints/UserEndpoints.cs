@@ -22,59 +22,59 @@ public static class UserEndpoints
         group.MapGet("/list", ListUsersAsync).WithSummary("List all registered MQTT usernames");
     }
 
-    private static async Task<IResult> CreateUserAsync(CreateUserRequest req, IDynsecService dynsec, IEmailService email)
+    private static async Task<IResult> CreateUserAsync(CreateUserRequest req, IDynsecService dynsec, IEmailService email, ILocalizationService loc)
     {
         if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
         try
         {
             if (await UsernameExistsAsync(dynsec, req.Username))
-                return Results.Conflict(ApiResponse.Fail($"Username '{req.Username}' is already taken."));
+                return Results.Conflict(ApiResponse.Fail(loc.Get("username_taken", req.Username)));
 
             var emailConflict = await FindEmailOwnerAsync(dynsec, req.Email, excludeUsername: null);
             if (emailConflict != null)
-                return Results.Conflict(ApiResponse.Fail($"Email '{req.Email}' is already in use."));
+                return Results.Conflict(ApiResponse.Fail(loc.Get("email_in_use", req.Email)));
 
             var token = Guid.NewGuid().ToString("N");
             await dynsec.CreateUserAsync(req.Username, req.Password, req.Email, [], disabled: true, textDescription: token);
             await email.SendVerificationEmailAsync(req.Email, req.Username, token);
-            return Results.Ok(ApiResponse.Ok("User created. A verification email has been sent."));
+            return Results.Ok(ApiResponse.Ok(loc.Get("user_created")));
         }
         catch (InvalidOperationException ex) { return Results.Conflict(ApiResponse.Fail(ex.Message)); }
         catch (OperationCanceledException) { return Results.StatusCode(503); }
         catch (Exception ex) { return Results.Problem(ex.Message); }
     }
 
-    private static async Task<IResult> VerifyUserAsync(string username, string token, IDynsecService dynsec)
+    private static async Task<IResult> VerifyUserAsync(string username, string token, IDynsecService dynsec, ILocalizationService loc)
     {
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(token))
-            return Results.Content(HtmlPage("Verification Failed", "Missing username or token."), "text/html", statusCode: 400);
+            return Results.Content(HtmlPage(loc.Get("verification_failed_title"), loc.Get("missing_username_or_token")), "text/html", statusCode: 400);
         try
         {
             await dynsec.VerifyUserAsync(username, token);
-            return Results.Content(HtmlPage("Account Verified", "Your account has been verified! You can now log in."), "text/html");
+            return Results.Content(HtmlPage(loc.Get("account_verified_title"), loc.Get("account_verified_message")), "text/html");
         }
         catch (KeyNotFoundException)
         {
-            return Results.Content(HtmlPage("Verification Failed", "Invalid or expired verification link."), "text/html", statusCode: 400);
+            return Results.Content(HtmlPage(loc.Get("verification_failed_title"), loc.Get("verification_link_invalid")), "text/html", statusCode: 400);
         }
         catch (InvalidOperationException)
         {
-            return Results.Content(HtmlPage("Verification Failed", "Invalid or expired verification link."), "text/html", statusCode: 400);
+            return Results.Content(HtmlPage(loc.Get("verification_failed_title"), loc.Get("verification_link_invalid")), "text/html", statusCode: 400);
         }
         catch (OperationCanceledException)
         {
-            return Results.Content(HtmlPage("Error", "Service unavailable. Please try again later."), "text/html", statusCode: 503);
+            return Results.Content(HtmlPage(loc.Get("error_title"), loc.Get("service_unavailable")), "text/html", statusCode: 503);
         }
         catch (Exception ex)
         {
-            return Results.Content(HtmlPage("Error", ex.Message), "text/html", statusCode: 500);
+            return Results.Content(HtmlPage(loc.Get("error_title"), ex.Message), "text/html", statusCode: 500);
         }
     }
 
-    private static async Task<IResult> ResendVerificationAsync(ResendVerificationRequest req, IDynsecService dynsec, IEmailService email)
+    private static async Task<IResult> ResendVerificationAsync(ResendVerificationRequest req, IDynsecService dynsec, IEmailService email, ILocalizationService loc)
     {
-        const string generic = "If the account exists and is unverified, a new verification email has been sent.";
         if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
+        var generic = loc.Get("resend_verification_sent");
         try
         {
             var user = await dynsec.GetUserAsync(req.Username);
@@ -104,35 +104,35 @@ public static class UserEndpoints
         </html>
         """;
 
-    private static async Task<IResult> DeleteUserAsync(DeleteUserRequest req, IDynsecService dynsec, IMqttPasswordVerifier verifier)
+    private static async Task<IResult> DeleteUserAsync(DeleteUserRequest req, IDynsecService dynsec, IMqttPasswordVerifier verifier, ILocalizationService loc)
     {
         if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
         if (!await verifier.VerifyAsync(req.Username, req.Password)) return Results.Unauthorized();
         try
         {
             await dynsec.DeleteUserAsync(req.Username);
-            return Results.Ok(ApiResponse.Ok("User deleted successfully."));
+            return Results.Ok(ApiResponse.Ok(loc.Get("user_deleted")));
         }
         catch (KeyNotFoundException ex) { return Results.NotFound(ApiResponse.Fail(ex.Message)); }
         catch (OperationCanceledException) { return Results.StatusCode(503); }
         catch (Exception ex) { return Results.Problem(ex.Message); }
     }
 
-    private static async Task<IResult> ChangePasswordAsync(ChangePasswordRequest req, IDynsecService dynsec, IMqttPasswordVerifier verifier)
+    private static async Task<IResult> ChangePasswordAsync(ChangePasswordRequest req, IDynsecService dynsec, IMqttPasswordVerifier verifier, ILocalizationService loc)
     {
         if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
         if (!await verifier.VerifyAsync(req.Username, req.Password)) return Results.Unauthorized();
         try
         {
             await dynsec.ChangePasswordAsync(req.Username, req.NewPassword);
-            return Results.Ok(ApiResponse.Ok("Password updated successfully."));
+            return Results.Ok(ApiResponse.Ok(loc.Get("password_updated")));
         }
         catch (KeyNotFoundException ex) { return Results.NotFound(ApiResponse.Fail(ex.Message)); }
         catch (OperationCanceledException) { return Results.StatusCode(503); }
         catch (Exception ex) { return Results.Problem(ex.Message); }
     }
 
-    private static async Task<IResult> ChangeEmailAsync(ChangeEmailRequest req, IDynsecService dynsec, IEmailService email, IMqttPasswordVerifier verifier)
+    private static async Task<IResult> ChangeEmailAsync(ChangeEmailRequest req, IDynsecService dynsec, IEmailService email, IMqttPasswordVerifier verifier, ILocalizationService loc)
     {
         if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
         if (!await verifier.VerifyAsync(req.Username, req.Password)) return Results.Unauthorized();
@@ -140,23 +140,23 @@ public static class UserEndpoints
         {
             var existing = await dynsec.GetUserAsync(req.Username);
             if (existing == null)
-                return Results.NotFound(ApiResponse.Fail($"User '{req.Username}' not found."));
+                return Results.NotFound(ApiResponse.Fail(loc.Get("user_not_found", req.Username)));
 
             var emailConflict = await FindEmailOwnerAsync(dynsec, req.NewEmail, excludeUsername: req.Username);
             if (emailConflict != null)
-                return Results.Conflict(ApiResponse.Fail($"Email '{req.NewEmail}' is already in use."));
+                return Results.Conflict(ApiResponse.Fail(loc.Get("email_in_use", req.NewEmail)));
 
             var token = Guid.NewGuid().ToString("N");
             await dynsec.ChangeEmailAsync(req.Username, req.NewEmail, token);
             await email.SendVerificationEmailAsync(req.NewEmail, req.Username, token);
-            return Results.Ok(ApiResponse.Ok("Email updated. A verification email has been sent to the new address."));
+            return Results.Ok(ApiResponse.Ok(loc.Get("email_updated")));
         }
         catch (KeyNotFoundException ex) { return Results.NotFound(ApiResponse.Fail(ex.Message)); }
         catch (OperationCanceledException) { return Results.StatusCode(503); }
         catch (Exception ex) { return Results.Problem(ex.Message); }
     }
 
-    private static async Task<IResult> ChangeUsernameAsync(ChangeUsernameRequest req, IDynsecService dynsec, IMqttPasswordVerifier verifier)
+    private static async Task<IResult> ChangeUsernameAsync(ChangeUsernameRequest req, IDynsecService dynsec, IMqttPasswordVerifier verifier, ILocalizationService loc)
     {
         if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
         if (!await verifier.VerifyAsync(req.Username, req.Password)) return Results.Unauthorized();
@@ -164,13 +164,13 @@ public static class UserEndpoints
         {
             var existing = await dynsec.GetUserAsync(req.Username);
             if (existing == null)
-                return Results.NotFound(ApiResponse.Fail($"User '{req.Username}' not found."));
+                return Results.NotFound(ApiResponse.Fail(loc.Get("user_not_found", req.Username)));
 
             if (await UsernameExistsAsync(dynsec, req.NewUsername))
-                return Results.Conflict(ApiResponse.Fail($"Username '{req.NewUsername}' is already taken."));
+                return Results.Conflict(ApiResponse.Fail(loc.Get("username_taken", req.NewUsername)));
 
             await dynsec.ChangeUsernameAsync(req.Username, req.NewUsername, req.NewPassword);
-            return Results.Ok(ApiResponse.Ok("Username updated successfully."));
+            return Results.Ok(ApiResponse.Ok(loc.Get("username_updated")));
         }
         catch (KeyNotFoundException ex) { return Results.NotFound(ApiResponse.Fail(ex.Message)); }
         catch (InvalidOperationException ex) { return Results.Conflict(ApiResponse.Fail(ex.Message)); }
@@ -178,12 +178,12 @@ public static class UserEndpoints
         catch (Exception ex) { return Results.Problem(ex.Message); }
     }
 
-    private static async Task<IResult> ListUsersAsync(IDynsecService dynsec)
+    private static async Task<IResult> ListUsersAsync(IDynsecService dynsec, ILocalizationService loc)
     {
         try
         {
             var names = await dynsec.ListClientNamesAsync();
-            return Results.Ok(ApiResponse.Ok("Users retrieved successfully.", data: names));
+            return Results.Ok(ApiResponse.Ok(loc.Get("users_retrieved"), data: names));
         }
         catch (OperationCanceledException) { return Results.StatusCode(503); }
         catch (Exception ex) { return Results.Problem(ex.Message); }
