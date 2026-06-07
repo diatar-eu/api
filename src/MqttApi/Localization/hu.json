@@ -17,12 +17,25 @@
   "user_not_found": "A(z) '{0}' felhasználó nem található.",
 
   "resend_verification_sent": "Ha a fiók létezik és nincs megerősítve, egy új megerősítő e-mail lett elküldve.",
+  "password_reset_requested": "Ha a fiók létezik, jelszó-visszaállító e-mailt küldtünk.",
   "missing_username_or_token": "Hiányzó felhasználónév vagy token.",
   "verification_link_invalid": "Érvénytelen vagy lejárt megerősítő hivatkozás.",
+  "password_reset_invalid_token": "Érvénytelen vagy lejárt jelszó-visszaállító hivatkozás.",
+  "password_reset_completed": "A jelszó sikeresen vissza lett állítva. Most már be tud jelentkezni az új jelszóval.",
+  "password_reset_title": "Jelszó visszaállítása",
+  "password_reset_intro": "Adja meg az új jelszót.",
+  "password_reset_new_password": "Új jelszó",
+  "password_reset_submit": "Jelszó visszaállítása",
+  "password_reset_failed_title": "Sikertelen jelszó-visszaállítás",
   "service_unavailable": "A szolgáltatás nem elérhető. Kérjük, próbálja újra később.",
 
   "account_verified_title": "Fiók megerősítve",
   "account_verified_message": "Fiókja sikeresen megerősítve! Most már bejelentkezhet.",
   "verification_failed_title": "Megerősítés sikertelen",
+  "reset_password_email_subject": "Jelszó visszaállítása",
+  "reset_password_email_greeting": "Szia <strong>{0}</strong>,",
+  "reset_password_email_intro": "Jelszó-visszaállítási kérést kaptunk. Az alábbi gombra kattintva állíthat be új jelszót:",
+  "reset_password_email_button": "Jelszó visszaállítása",
+  "reset_password_email_disclaimer": "Ha nem Ön kérte, hagyja figyelmen kívül ezt az e-mailt.",
   "error_title": "Hiba"
 }
