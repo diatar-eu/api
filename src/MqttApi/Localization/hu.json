@@ -1,6 +1,6 @@
 {
   "verify_email_subject": "Erősítse meg fiókját",
-  "verify_email_greeting": "Szia <strong>{0}</strong>,",
+  "verify_email_greeting": "Kedves <strong>{0}</strong>,",
   "verify_email_intro": "Fiókja sikeresen létrejött. Kérjük, erősítse meg e-mail címét az alábbi linkre kattintva:",
   "verify_email_button": "Megerősítés",
   "verify_email_disclaimer": "Ha nem Ön hozta létre ezt a fiókot, hagyja figyelmen kívül ezt az e-mailt.",
@@ -33,7 +33,7 @@
   "account_verified_message": "Fiókja sikeresen megerősítve! Most már bejelentkezhet.",
   "verification_failed_title": "Megerősítés sikertelen",
   "reset_password_email_subject": "Jelszó visszaállítása",
-  "reset_password_email_greeting": "Szia <strong>{0}</strong>,",
+  "reset_password_email_greeting": "Kedves <strong>{0}</strong>,",
   "reset_password_email_intro": "Jelszó-visszaállítási kérést kaptunk. Az alábbi gombra kattintva állíthat be új jelszót:",
   "reset_password_email_button": "Jelszó visszaállítása",
   "reset_password_email_disclaimer": "Ha nem Ön kérte, hagyja figyelmen kívül ezt az e-mailt.",
