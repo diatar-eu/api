@@ -110,6 +110,9 @@ public class DynsecService : IDynsecService, IHostedService
         var command = new DynsecCommand { Command = DynsecConstants.Commands.DeleteClient, Username = username };
         var response = await SendCommandAsync(command, ct);
         ThrowOnError(response, username);
+
+        var userRole = DynsecConstants.Acl.RolePrefix + username;
+        await DeleteRoleIfExistsAsync(userRole, ct);
     }
 
     public async Task ChangePasswordAsync(string username, string newPassword, CancellationToken ct = default)
@@ -138,14 +141,35 @@ public class DynsecService : IDynsecService, IHostedService
         var existing = await GetUserAsync(username, ct)
             ?? throw new KeyNotFoundException($"User '{username}' not found.");
 
+        var oldUserRole = DynsecConstants.Acl.RolePrefix + username;
+        var newUserRole = DynsecConstants.Acl.RolePrefix + newUsername;
+        var existingRoles = existing.Roles?.Select(r => r.Rolename).ToArray() ?? [];
+        var hasOldUserRole = existingRoles.Contains(oldUserRole, StringComparer.Ordinal);
+
+        var migratedRoles = existingRoles;
+        if (hasOldUserRole)
+        {
+            // Ensure the target role exists with ACLs bound to the new username.
+            await DeleteRoleIfExistsAsync(newUserRole, ct);
+            await CreateRoleAsync(newUserRole, newUsername, ct);
+
+            migratedRoles = existingRoles
+                .Select(role => role == oldUserRole ? newUserRole : role)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+        }
+
         await CreateUserAsync(
             newUsername,
             newPassword,
             existing.TextName,
-            existing.Roles?.Select(r => r.Rolename).ToArray() ?? [],
+            migratedRoles,
             ct: ct);
 
         await DeleteUserAsync(username, ct);
+
+        if (hasOldUserRole)
+            await DeleteRoleIfExistsAsync(oldUserRole, ct);
     }
 
     public async Task<DynsecClientData?> GetUserAsync(string username, CancellationToken ct = default)
@@ -241,5 +265,20 @@ public class DynsecService : IDynsecService, IHostedService
             DynsecConstants.Errors.ClientNotFound      => new KeyNotFoundException($"User '{username}' not found."),
             _                                          => new Exception($"Dynsec error: {response.Error}")
         };
+    }
+
+    private async Task DeleteRoleIfExistsAsync(string roleName, CancellationToken ct)
+    {
+        var command = new DynsecCommand
+        {
+            Command = DynsecConstants.Commands.DeleteRole,
+            Rolename = roleName
+        };
+
+        var response = await SendCommandAsync(command, ct);
+        if (response.IsSuccess || response.Error == DynsecConstants.Errors.RoleNotFound)
+            return;
+
+        throw new Exception($"Dynsec error: {response.Error}");
     }
 }

@@ -12,12 +12,14 @@ public static class DynsecConstants
         public const string GetClient    = "getClient";
         public const string ListClients  = "listClients";
         public const string CreateRole   = "createRole";
+        public const string DeleteRole   = "deleteRole";
     }
 
     public static class Errors
     {
         public const string ClientAlreadyExists = "Client already exists";
         public const string ClientNotFound      = "Client not found";
+        public const string RoleNotFound        = "Role not found";
     }
 
     public static class Acl

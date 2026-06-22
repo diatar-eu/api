@@ -290,7 +290,19 @@ public static class UserEndpoints
         try
         {
             var names = await dynsec.ListClientNamesAsync();
-            return Results.Ok(ApiResponse.Ok(loc.Get("users_retrieved"), data: names));
+            var filteredNames = new List<string>();
+
+            foreach (var name in names)
+            {
+                var user = await dynsec.GetUserAsync(name);
+                var hasUserRole = user?.Roles?.Any(role =>
+                    role.Rolename.StartsWith(DynsecConstants.Acl.RolePrefix, StringComparison.Ordinal)) == true;
+
+                if (hasUserRole)
+                    filteredNames.Add(name);
+            }
+
+            return Results.Ok(ApiResponse.Ok(loc.Get("users_retrieved"), data: filteredNames));
         }
         catch (OperationCanceledException) { return Results.StatusCode(503); }
         catch (Exception ex) { return Results.Problem(ex.Message); }
