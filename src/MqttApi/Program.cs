@@ -19,7 +19,22 @@ builder.Services.AddHostedService(sp => (DynsecService)sp.GetRequiredService<IDy
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
 
+const string AllowWebDiatarEuPolicy = "AllowWebDiatarEu";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(AllowWebDiatarEuPolicy, policy =>
+    {
+        policy.WithOrigins(
+                "https://web.diatar.eu",
+                "http://web.diatar.eu")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
+
+app.UseCors(AllowWebDiatarEuPolicy);
 
 app.MapOpenApi();
 app.MapScalarApiReference();
