@@ -92,5 +92,13 @@ if (!adminOptions.Enabled)
     app.Logger.LogWarning("Az admin felület le van tiltva (Admin:Enabled=false)");
 else if (string.IsNullOrWhiteSpace(adminOptions.Usernames))
     app.Logger.LogWarning("Az admin felület nincs használható: az Admin:Usernames (illetve az Admin_Usernames környezeti változó) üres");
+else if (adminAddress is not null)
+    app.Logger.LogInformation(
+        "Admin felület: {Address}:{Port} - {Hint}",
+        adminOptions.ListenAddress,
+        adminOptions.Port,
+        IPAddress.IsLoopback(adminAddress)
+            ? "csak a szerveren elérhető"
+            : "a host oldali port mappinget 127.0.0.1-re kell korlátozni, különben az admin hálózatban is elérhető");
 
 app.Run();

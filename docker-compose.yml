@@ -26,4 +26,8 @@ services:
       - Admin__Usernames=${Admin_Usernames}
       - Admin__CookieSecret=${Admin_CookieSecret}
       - Admin__Port=${Admin_Port:-5262}
+      # A Docker port publikálás a konténer eth0 címére DNAT-ol, nem a loopbackra, ezért
+      # a konténerben minden interfészre figyelni kell. A védelmet a fenti 127.0.0.1-es
+      # host mapping adja: kívülről csak SSH alagúttal (vagy localhoston) érhető el.
+      - Admin__ListenAddress=0.0.0.0
     restart: unless-stopped

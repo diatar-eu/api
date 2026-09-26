@@ -339,6 +339,14 @@ konfigurációból származó címnek tekint. A végpont valóban le van kötve
 (`Now listening on: http://[::]:8080`), tehát ártalmatlan. Eltüntetéséhez
 `ASPNETCORE_HTTP_PORTS=` (üresen) kellene a compose-ba.
 
+**Konténerben a listen cím 0.0.0.0.** A Docker port publikálás a konténer eth0
+címére DNAT-ol, nem a konténer loopbackjára, ezért `127.0.0.1`-re kötve a published
+port halott (connection refused) volt. Ezért a compose `Admin__ListenAddress=0.0.0.0`-t
+ad be, és a védelmet a `127.0.0.1:${Admin_Port}:${Admin_Port}` host mapping adja: a
+admin a szerveren kívülről csak SSH alagúttal érhető el. Bare metal / systemd
+üzemben a `127.0.0.1` marad a `ListenAddress` alapértéke. Induláskor az app kiírja a
+tényleges admin címet, és nem-loopback cím esetén figyelmeztet a host mappingre.
+
 **Assetek a build kimenetébe:** `AdminAssets\*` a Web SDK default `Content` globjaiba
 nem esik bele, ezért `Content Include` (nem `Update`) kellett hozzá, különben a
 `bin` alatt nincs `AdminAssets` mappa és minden asset 404.
