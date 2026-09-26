@@ -9,7 +9,9 @@ services:
       # Az admin felület csak a host loopback-jén érhető el (pl. SSH alagúttal).
       - "127.0.0.1:${Admin_Port:-5262}:${Admin_Port:-5262}"
     environment:
-      - ASPNETCORE_URLS=http://+:8080
+      # A publikus API címe. ASPNETCORE_URLS is szabályozhatná, de akkor a Kestrel
+      # "Overriding address(es)" figyelmeztetést ír minden induláskor.
+      - Public__Url=http://+:8080
       - Mqtt__Host=${MQTT_HOST}
       - Mqtt__AdminUsername=${MQTT_ADMIN_USERNAME}
       - Mqtt__AdminPassword=${MQTT_ADMIN_PASSWORD}

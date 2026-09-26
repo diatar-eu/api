@@ -315,11 +315,29 @@ Broker nélkül futtatható:
 ## 🔧 11. Megvalósítás közben kiderült döntések
 
 **Kestrel: két listener, de a publikus is explicit.** Az ASP.NET Core-ban egyetlen
-`kestrel.Listen(...)` hívás felülírja az `ASPNETCORE_URLS`-t / launch settings URL-t, így
-a publikus port elsűnt. Ezért a `Program.cs` a hosting URL-eket (`ASPNETCORE_URLS`, majd
-`urls`) maga bindolja, ugyanabban a `ConfigureKestrel` blokkban. Szándékos mellékhatás:
-a Kestrel kiírja az `Overriding address(es)` figyelmeztetést, mert a configban is van
-cím, de **mindkét** endpoint valóban elindul (ezt a `Now listening on:` sorok igazolják).
+`kestrel.Listen(...)` hívás felülírja a hosting címeket (`ASPNETCORE_URLS`,
+`ASPNETCORE_HTTP_PORTS`), ezért a publikus port elsűnt. A `Program.cs` ezért maga
+bindolja a publikus címet is, ugyanabban a `ConfigureKestrel` blokkban.
+
+**A publikus cím forrása a `Public:Url`** (`appsettings.json`, felülírható
+`Public__Url` környezeti változóval), nem az `ASPNETCORE_URLS`. Így minden listener
+egy helyen van leírva az `Admin:ListenAddress`/`Admin:Port` mellett, és a konténerben
+nem keletkezik a `HTTP_PORTS`-fölülírás figyelmeztetés. Sorrend: `ASPNETCORE_URLS`
+(operator override) → `Public:Url` → `ASPNETCORE_HTTP_PORTS`/`HTTPS_PORTS` →
+`http://0.0.0.0:8080`.
+
+**A `+`/`*` host nem valid URI**, tehát `Uri.TryCreate` nem használható rá: a
+`EndpointBinding` a Kestrelhez hasonló kézi parse-t végez (`http://+:8080`,
+`http://[::]:8080`, `http://localhost:5261`, alapértelmezett port, csupasz IPv6
+elutasítva). Ha a publikus URL és az admin listener ugyanaz lenne, a Kestrel csak
+zavaros bind-hibát adna induláskor, ezért ezt előre ellenőrzi és tiszta
+`InvalidOperationException`-nel áll le.
+
+**Egy figyelmeztetés megmarad:** `Overriding address(es) 'http://*:8080'`, mert a
+.NET konténer image `ASPNETCORE_HTTP_PORTS=8080`-at állít be, amit a Kestrel
+konfigurációból származó címnek tekint. A végpont valóban le van kötve
+(`Now listening on: http://[::]:8080`), tehát ártalmatlan. Eltüntetéséhez
+`ASPNETCORE_HTTP_PORTS=` (üresen) kellene a compose-ba.
 
 **Assetek a build kimenetébe:** `AdminAssets\*` a Web SDK default `Content` globjaiba
 nem esik bele, ezért `Content Include` (nem `Update`) kellett hozzá, különben a
