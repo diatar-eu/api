@@ -194,12 +194,87 @@ public class DynsecService : IDynsecService, IHostedService
         ThrowOnError(response, username);
     }
 
+    public async Task SetEmailAsync(string username, string email, CancellationToken ct = default)
+    {
+        var command = new DynsecCommand
+        {
+            Command = DynsecConstants.Commands.ModifyClient,
+            Username = username,
+            TextName = email
+        };
+        var response = await SendCommandAsync(command, ct);
+        ThrowOnError(response, username);
+    }
+
+    public async Task SetDisabledAsync(string username, bool disabled, CancellationToken ct = default)
+    {
+        var command = new DynsecCommand
+        {
+            Command = DynsecConstants.Commands.ModifyClient,
+            Username = username,
+            Disabled = disabled
+        };
+        var response = await SendCommandAsync(command, ct);
+        ThrowOnError(response, username);
+    }
+
+    public async Task ForceVerifyAsync(string username, CancellationToken ct = default)
+    {
+        var user = await GetUserAsync(username, ct)
+            ?? throw new KeyNotFoundException($"User '{username}' not found.");
+
+        var rolename = DynsecConstants.Acl.RolePrefix + username;
+        var hasUserRole = user.Roles?.Any(r => string.Equals(r.Rolename, rolename, StringComparison.Ordinal)) == true;
+
+        if (!hasUserRole)
+            await CreateRoleAsync(rolename, username, ct);
+
+        var roles = user.Roles?.Select(r => r.Rolename).ToList() ?? [];
+        if (!hasUserRole) roles.Add(rolename);
+
+        var command = new DynsecCommand
+        {
+            Command = DynsecConstants.Commands.ModifyClient,
+            Username = username,
+            TextDescription = string.Empty,
+            Disabled = false,
+            Roles = roles.Select(r => new DynsecRoleRef { Rolename = r }).ToList()
+        };
+        var response = await SendCommandAsync(command, ct);
+        ThrowOnError(response, username);
+    }
+
     public async Task<IReadOnlyList<string>> ListClientNamesAsync(CancellationToken ct = default)
     {
         var command = new DynsecCommand { Command = DynsecConstants.Commands.ListClients };
         var response = await SendCommandAsync(command, ct);
         ThrowOnError(response, "listClients");
         return response.Data?.Clients ?? [];
+    }
+
+    public async Task<IReadOnlyList<DynsecClientData>> ListClientsDetailedAsync(CancellationToken ct = default)
+    {
+        var names = await ListClientNamesAsync(ct);
+        if (names.Count == 0) return [];
+
+        // One round trip per user, so keep a few of them in flight at the same time.
+        using var throttle = new SemaphoreSlim(DynsecConstants.ClientLookupConcurrency);
+        var users = new DynsecClientData?[names.Count];
+
+        await Task.WhenAll(names.Select(async (name, index) =>
+        {
+            await throttle.WaitAsync(ct);
+            try
+            {
+                users[index] = await GetUserAsync(name, ct);
+            }
+            finally
+            {
+                throttle.Release();
+            }
+        }));
+
+        return users.Where(u => u is not null).Select(u => u!).ToList();
     }
 
     private async Task<DynsecResponse> SendCommandAsync(DynsecCommand command, CancellationToken ct)

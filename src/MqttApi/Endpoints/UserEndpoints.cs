@@ -1,7 +1,8 @@
-using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography;
 using System.Text;
 using MqttApi.Constants;
+using MqttApi.Models;
+using MqttApi.Models.Dynsec;
 using MqttApi.Models.Requests;
 using MqttApi.Models.Responses;
 using MqttApi.Services;
@@ -27,22 +28,18 @@ public static class UserEndpoints
         group.MapGet("/list", ListUsersAsync).WithSummary("List all registered MQTT usernames");
     }
 
-    private static async Task<IResult> CreateUserAsync(CreateUserRequest req, IDynsecService dynsec, IEmailService email, ILocalizationService loc)
+    private static async Task<IResult> CreateUserAsync(CreateUserRequest req, IUserManagementService users, ILocalizationService loc)
     {
-        if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
+        if (!ModelValidator.TryValidate(req, out var errors)) return ModelValidator.Invalid(errors);
         try
         {
-            if (await UsernameExistsAsync(dynsec, req.Username))
-                return Results.Conflict(ApiResponse.Fail(loc.Get("username_taken", req.Username)));
-
-            var emailConflict = await FindEmailOwnerAsync(dynsec, req.Email, excludeUsername: null);
-            if (emailConflict != null)
-                return Results.Conflict(ApiResponse.Fail(loc.Get("email_in_use", req.Email)));
-
-            var token = Guid.NewGuid().ToString("N");
-            await dynsec.CreateUserAsync(req.Username, req.Password, req.Email, [], disabled: true, textDescription: token);
-            await email.SendVerificationEmailAsync(req.Email, req.Username, token);
-            return Results.Ok(ApiResponse.Ok(loc.Get("user_created")));
+            var status = await users.CreateUserAsync(req.Username, req.Password, req.Email, skipVerification: false);
+            return status switch
+            {
+                UserCreateStatus.UsernameTaken => Results.Conflict(ApiResponse.Fail(loc.Get("username_taken", req.Username))),
+                UserCreateStatus.EmailTaken => Results.Conflict(ApiResponse.Fail(loc.Get("email_in_use", req.Email))),
+                _ => Results.Ok(ApiResponse.Ok(loc.Get("user_created")))
+            };
         }
         catch (InvalidOperationException ex) { return Results.Conflict(ApiResponse.Fail(ex.Message)); }
         catch (OperationCanceledException) { return Results.StatusCode(503); }
@@ -76,22 +73,13 @@ public static class UserEndpoints
         }
     }
 
-    private static async Task<IResult> ResendVerificationAsync(ResendVerificationRequest req, IDynsecService dynsec, IEmailService email, ILocalizationService loc)
+    private static async Task<IResult> ResendVerificationAsync(ResendVerificationRequest req, IUserManagementService users, ILocalizationService loc)
     {
-        if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
+        if (!ModelValidator.TryValidate(req, out var errors)) return ModelValidator.Invalid(errors);
         var generic = loc.Get("resend_verification_sent");
         try
         {
-            var user = await dynsec.GetUserAsync(req.Username);
-            if (user == null || user.Disabled == false)
-                return Results.Ok(ApiResponse.Ok(generic));
-
-            if (!string.Equals(user.TextName, req.Email, StringComparison.OrdinalIgnoreCase))
-                return Results.Ok(ApiResponse.Ok(generic));
-
-            var token = Guid.NewGuid().ToString("N");
-            await dynsec.SetVerificationTokenAsync(req.Username, token);
-            await email.SendVerificationEmailAsync(req.Email, req.Username, token);
+            await users.ResendVerificationAsync(req.Username, req.Email);
             return Results.Ok(ApiResponse.Ok(generic));
         }
         catch (OperationCanceledException) { return Results.StatusCode(503); }
@@ -100,7 +88,7 @@ public static class UserEndpoints
 
     private static async Task<IResult> RequestPasswordResetAsync(RequestPasswordResetRequest req, IDynsecService dynsec, IEmailService email, ILocalizationService loc)
     {
-        if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
+        if (!ModelValidator.TryValidate(req, out var errors)) return ModelValidator.Invalid(errors);
         var generic = loc.Get("password_reset_requested");
         try
         {
@@ -130,7 +118,7 @@ public static class UserEndpoints
 
     private static async Task<IResult> ResetPasswordAsync(ResetPasswordRequest req, IDynsecService dynsec, ILocalizationService loc)
     {
-        if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
+        if (!ModelValidator.TryValidate(req, out var errors)) return ModelValidator.Invalid(errors);
         try
         {
             var user = await dynsec.GetUserAsync(req.Username);
@@ -213,7 +201,7 @@ public static class UserEndpoints
 
     private static async Task<IResult> DeleteUserAsync(DeleteUserRequest req, IDynsecService dynsec, IMqttPasswordVerifier verifier, ILocalizationService loc)
     {
-        if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
+        if (!ModelValidator.TryValidate(req, out var errors)) return ModelValidator.Invalid(errors);
         if (!await verifier.VerifyAsync(req.Username, req.Password)) return Results.Unauthorized();
         try
         {
@@ -227,7 +215,7 @@ public static class UserEndpoints
 
     private static async Task<IResult> ChangePasswordAsync(ChangePasswordRequest req, IDynsecService dynsec, IMqttPasswordVerifier verifier, ILocalizationService loc)
     {
-        if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
+        if (!ModelValidator.TryValidate(req, out var errors)) return ModelValidator.Invalid(errors);
         if (!await verifier.VerifyAsync(req.Username, req.Password)) return Results.Unauthorized();
         try
         {
@@ -239,9 +227,9 @@ public static class UserEndpoints
         catch (Exception ex) { return Results.Problem(ex.Message); }
     }
 
-    private static async Task<IResult> ChangeEmailAsync(ChangeEmailRequest req, IDynsecService dynsec, IEmailService email, IMqttPasswordVerifier verifier, ILocalizationService loc)
+    private static async Task<IResult> ChangeEmailAsync(ChangeEmailRequest req, IDynsecService dynsec, IUserManagementService users, IEmailService email, IMqttPasswordVerifier verifier, ILocalizationService loc)
     {
-        if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
+        if (!ModelValidator.TryValidate(req, out var errors)) return ModelValidator.Invalid(errors);
         if (!await verifier.VerifyAsync(req.Username, req.Password)) return Results.Unauthorized();
         try
         {
@@ -249,7 +237,7 @@ public static class UserEndpoints
             if (existing == null)
                 return Results.NotFound(ApiResponse.Fail(loc.Get("user_not_found", req.Username)));
 
-            var emailConflict = await FindEmailOwnerAsync(dynsec, req.NewEmail, excludeUsername: req.Username);
+            var emailConflict = await users.FindEmailOwnerAsync(req.NewEmail, excludeUsername: req.Username);
             if (emailConflict != null)
                 return Results.Conflict(ApiResponse.Fail(loc.Get("email_in_use", req.NewEmail)));
 
@@ -263,9 +251,9 @@ public static class UserEndpoints
         catch (Exception ex) { return Results.Problem(ex.Message); }
     }
 
-    private static async Task<IResult> ChangeUsernameAsync(ChangeUsernameRequest req, IDynsecService dynsec, IMqttPasswordVerifier verifier, ILocalizationService loc)
+    private static async Task<IResult> ChangeUsernameAsync(ChangeUsernameRequest req, IDynsecService dynsec, IUserManagementService users, IMqttPasswordVerifier verifier, ILocalizationService loc)
     {
-        if (!Validate(req, out var errors)) return Results.ValidationProblem(errors);
+        if (!ModelValidator.TryValidate(req, out var errors)) return ModelValidator.Invalid(errors);
         if (!await verifier.VerifyAsync(req.Username, req.Password)) return Results.Unauthorized();
         try
         {
@@ -273,7 +261,7 @@ public static class UserEndpoints
             if (existing == null)
                 return Results.NotFound(ApiResponse.Fail(loc.Get("user_not_found", req.Username)));
 
-            if (await UsernameExistsAsync(dynsec, req.NewUsername))
+            if (await users.UsernameExistsAsync(req.NewUsername))
                 return Results.Conflict(ApiResponse.Fail(loc.Get("username_taken", req.NewUsername)));
 
             await dynsec.ChangeUsernameAsync(req.Username, req.NewUsername, req.NewPassword);
@@ -289,58 +277,16 @@ public static class UserEndpoints
     {
         try
         {
-            var names = await dynsec.ListClientNamesAsync();
-            var filteredNames = new List<string>();
+            var users = await dynsec.ListClientsDetailedAsync();
+            var usernames = users
+                .Where(user => user.HasUserRole())
+                .Select(user => user.Username ?? string.Empty)
+                .ToList();
 
-            foreach (var name in names)
-            {
-                var user = await dynsec.GetUserAsync(name);
-                var hasUserRole = user?.Roles?.Any(role =>
-                    role.Rolename.StartsWith(DynsecConstants.Acl.RolePrefix, StringComparison.Ordinal)) == true;
-
-                if (hasUserRole)
-                    filteredNames.Add(name);
-            }
-
-            return Results.Ok(ApiResponse.Ok(loc.Get("users_retrieved"), data: filteredNames));
+            return Results.Ok(ApiResponse.Ok(loc.Get("users_retrieved"), data: usernames));
         }
         catch (OperationCanceledException) { return Results.StatusCode(503); }
         catch (Exception ex) { return Results.Problem(ex.Message); }
-    }
-
-    private static async Task<bool> UsernameExistsAsync(IDynsecService dynsec, string username) =>
-        await dynsec.GetUserAsync(username) != null;
-
-    // Returns the username that owns the email, or null if the email is free.
-    // Pass excludeUsername to skip the current user (used when changing their own email).
-    private static async Task<string?> FindEmailOwnerAsync(IDynsecService dynsec, string email, string? excludeUsername)
-    {
-        var names = await dynsec.ListClientNamesAsync();
-        foreach (var name in names)
-        {
-            if (excludeUsername != null && string.Equals(name, excludeUsername, StringComparison.OrdinalIgnoreCase))
-                continue;
-            var user = await dynsec.GetUserAsync(name);
-            if (user?.TextName != null &&
-                string.Equals(user.TextName, email, StringComparison.OrdinalIgnoreCase))
-                return name;
-        }
-        return null;
-    }
-
-    private static bool Validate<T>(T model, out Dictionary<string, string[]> errors)
-    {
-        var context = new ValidationContext(model!);
-        var results = new List<ValidationResult>();
-        if (Validator.TryValidateObject(model!, context, results, validateAllProperties: true))
-        {
-            errors = [];
-            return true;
-        }
-        errors = results
-            .GroupBy(r => r.MemberNames.FirstOrDefault() ?? string.Empty)
-            .ToDictionary(g => g.Key, g => g.Select(r => r.ErrorMessage ?? "Invalid").ToArray());
-        return false;
     }
 
     private static bool TokenMatches(string? storedToken, string inputToken)

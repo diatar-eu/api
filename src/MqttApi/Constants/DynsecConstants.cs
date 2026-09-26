@@ -3,6 +3,7 @@ namespace MqttApi.Constants;
 public static class DynsecConstants
 {
     public const string CommandTopic = "$CONTROL/dynamic-security/v1";
+    public const int ClientLookupConcurrency = 8;
 
     public static class Commands
     {

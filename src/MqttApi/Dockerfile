@@ -8,5 +8,5 @@ RUN dotnet publish MqttApi/MqttApi.csproj -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
-EXPOSE 8080
+EXPOSE 8080 5262
 ENTRYPOINT ["dotnet", "MqttApi.dll"]

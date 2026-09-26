@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Diatar admin</title>
+<link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body class="login-body">
+
+<form class="card login-card" id="loginForm" autocomplete="on">
+    <h1 data-i18n="admin_login_title">Bejelentkezés</h1>
+    <p class="muted" data-i18n="admin_login_intro">Csak a konfigurációban engedélyezett adminok.</p>
+
+    <label for="username" data-i18n="admin_username">Felhasználónév</label>
+    <input id="username" name="username" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" required autofocus>
+
+    <label for="password" data-i18n="admin_password">Jelszó</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+    <button type="submit" class="primary" data-i18n="admin_login_button">Belépés</button>
+    <p class="error" id="loginError" role="alert" hidden></p>
+</form>
+
+<script>window.__I18N__ = __ADMIN_I18N__;</script>
+<script src="/admin/admin.js"></script>
+</body>
+</html>

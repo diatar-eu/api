@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <Content Update="Localization\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="AdminAssets\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

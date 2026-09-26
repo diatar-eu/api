@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Diatar admin</title>
+<link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+
+<header class="topbar">
+    <h1 data-i18n="admin_title">Diatar admin</h1>
+    <div class="topbar-actions">
+        <span class="muted" id="currentUser"></span>
+        <button id="refreshButton" type="button" data-i18n="admin_refresh">Frissítés</button>
+        <button id="logoutButton" type="button" data-i18n="admin_logout">Kijelentkezés</button>
+    </div>
+</header>
+
+<main>
+    <section class="card">
+        <div class="toolbar">
+            <input id="searchInput" type="search" data-i18n-placeholder="admin_search_placeholder" placeholder="Keresés" autocomplete="off">
+            <select id="statusFilter">
+                <option value="all" data-i18n="admin_filter_all">Mind</option>
+                <option value="verified" data-i18n="admin_filter_verified">Megerősített</option>
+                <option value="pending" data-i18n="admin_filter_pending">Megerősítésre vár</option>
+                <option value="disabled" data-i18n="admin_filter_disabled">Tiltva</option>
+            </select>
+            <button id="newUserButton" type="button" class="primary" data-i18n="admin_new_user">Új felhasználó</button>
+        </div>
+
+        <p class="muted" id="status"></p>
+
+        <table id="userTable" hidden>
+            <thead>
+                <tr>
+                    <th data-i18n="admin_column_user">Felhasználó</th>
+                    <th data-i18n="admin_column_email">E-mail</th>
+                    <th data-i18n="admin_column_status">Állapot</th>
+                    <th data-i18n="admin_column_roles">Szerepek</th>
+                    <th class="right" data-i18n="admin_column_actions">Műveletek</th>
+                </tr>
+            </thead>
+            <tbody id="userRows"></tbody>
+        </table>
+
+        <p class="muted center" id="emptyState" data-i18n="admin_no_users" hidden>Nincs találat.</p>
+    </section>
+</main>
+
+<div class="modal-backdrop" id="modal" hidden>
+    <div class="card modal">
+        <h2 id="modalTitle"></h2>
+        <form id="modalForm">
+            <div id="modalFields"></div>
+            <p class="error" id="modalError" role="alert" hidden></p>
+            <div class="modal-actions">
+                <button type="button" id="modalCancel" data-i18n="admin_cancel">Mégse</button>
+                <button type="submit" class="primary" id="modalSubmit" data-i18n="admin_save">Mentés</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>window.__I18N__ = __ADMIN_I18N__;</script>
+<script src="/admin/admin.js"></script>
+</body>
+</html>

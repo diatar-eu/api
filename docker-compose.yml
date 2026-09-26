@@ -6,6 +6,8 @@ services:
       dockerfile: src/MqttApi/Dockerfile
     ports:
       - "80:8080"
+      # Az admin felület csak a host loopback-jén érhető el (pl. SSH alagúttal).
+      - "127.0.0.1:${Admin_Port:-5262}:${Admin_Port:-5262}"
     environment:
       - ASPNETCORE_URLS=http://+:8080
       - Mqtt__Host=${MQTT_HOST}
@@ -19,4 +21,7 @@ services:
       - Email__FromAddress=${EMAIL_FROM_ADDRESS}
       - Email__FromName=${EMAIL_FROM_NAME}
       - Email__BaseUrl=${EMAIL_BASE_URL}
+      - Admin__Usernames=${Admin_Usernames}
+      - Admin__CookieSecret=${Admin_CookieSecret}
+      - Admin__Port=${Admin_Port:-5262}
     restart: unless-stopped
