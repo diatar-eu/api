@@ -25,6 +25,6 @@ public class AdminUserView
             ? user.HasPendingVerification() ? UserStatus.Pending : UserStatus.Disabled
             : UserStatus.Verified,
         Roles = user.Roles?.Select(r => r.Rolename).OrderBy(r => r, StringComparer.Ordinal).ToArray() ?? [],
-        IsDiatarUser = user.HasUserRole()
+        IsDiatarUser = user.IsDiatarUser()
     };
 }

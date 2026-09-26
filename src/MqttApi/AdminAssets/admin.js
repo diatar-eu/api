@@ -270,22 +270,28 @@
         userRows.textContent = '';
 
         users.forEach(function (user) {
-            const suspended = user.status === 'disabled';
-
             const roles = el('div', { className: 'role-list' });
             if (user.isDiatarUser) {
-                (user.roles || []).forEach(function (role) { roles.appendChild(badge(role, 'other')); });
+                if ((user.roles || []).length === 0) {
+                    // Megerősítésre váró felhasználó: a szerep csak megerősítéskor jön létre.
+                    roles.appendChild(el('span', { className: 'muted', text: '-' }));
+                } else {
+                    user.roles.forEach(function (role) { roles.appendChild(badge(role, 'other')); });
+                }
             } else {
                 roles.appendChild(badge(t('admin_mqtt_client'), 'other'));
             }
 
             const actions = el('div', { className: 'actions' });
 
-            if (user.status !== 'verified') {
+            // pending: a regisztráció befejezése (token törlése, szerep, engedélyezés)
+            // disabled: egy korábban működő kliens visszakapcsolása
+            // verified: fut, ezért letiltható
+            if (user.status === 'pending') {
                 actions.appendChild(actionButton(t('admin_action_verify'),
                     function () { runAndRefresh(user, 'POST', '/verify'); }));
             }
-            if (!suspended) {
+            if (user.status === 'disabled') {
                 actions.appendChild(actionButton(t('admin_action_enable'),
                     function () { runAndRefresh(user, 'POST', '/enable'); }));
             }
@@ -297,7 +303,7 @@
             actions.appendChild(actionButton(t('admin_action_password'), function () { promptPassword(user); }));
             actions.appendChild(actionButton(t('admin_action_email'), function () { promptEmail(user); }));
 
-            if (!suspended) {
+            if (user.status === 'verified') {
                 actions.appendChild(actionButton(t('admin_action_disable'), function () {
                     confirmAction(t('admin_action_disable'), t('admin_confirm_disable', user.username),
                         function () { return userRequest(user, 'POST', '/disable'); });

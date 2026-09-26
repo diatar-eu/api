@@ -169,7 +169,9 @@ public static class AdminEndpoints
     {
         return ExecuteAsync(context, audit, "user.enable", username, async () =>
         {
-            await dynsec.SetDisabledAsync(username, false, context.RequestAborted);
+            // A role nélküli kliens (például egy törölt token) engedélyezve nem tudna
+            // publikálni és nem tudna belépni, ezért a szerep itt is létrejön.
+            await dynsec.SetEnabledAsync(username, context.RequestAborted);
             return Results.Ok(ApiResponse.Ok(loc.Get("admin_user_enabled", username)));
         });
     }

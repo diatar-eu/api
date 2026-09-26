@@ -17,6 +17,7 @@ public interface IDynsecService
     Task SetEmailAsync(string username, string email, CancellationToken ct = default);
     Task SetDisabledAsync(string username, bool disabled, CancellationToken ct = default);
     Task ForceVerifyAsync(string username, CancellationToken ct = default);
+    Task SetEnabledAsync(string username, CancellationToken ct = default);
     Task<IReadOnlyList<string>> ListClientNamesAsync(CancellationToken ct = default);
     Task<IReadOnlyList<DynsecClientData>> ListClientsDetailedAsync(CancellationToken ct = default);
 }

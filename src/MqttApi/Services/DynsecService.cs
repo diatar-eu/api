@@ -218,28 +218,44 @@ public class DynsecService : IDynsecService, IHostedService
         ThrowOnError(response, username);
     }
 
-    public async Task ForceVerifyAsync(string username, CancellationToken ct = default)
+    // Completes a self service registration: clears the verification token, creates the
+    // missing publish role and lets the client connect.
+    public Task ForceVerifyAsync(string username, CancellationToken ct = default) =>
+        ActivateAsync(username, clearVerificationToken: true, ct);
+
+    // Re-enables a disabled client, creating the publish role if it is missing, so that
+    // the user can connect and publish again. The verification token is left untouched.
+    public Task SetEnabledAsync(string username, CancellationToken ct = default) =>
+        ActivateAsync(username, clearVerificationToken: false, ct);
+
+    // An unverified user is created without any role (the token lives in TextDescription),
+    // and modifyClient replaces the whole role list, so the role has to be created and
+    // the full list sent back explicitly. The role is recreated when it already exists
+    // but is not assigned, because then its ACLs may be stale.
+    private async Task ActivateAsync(string username, bool clearVerificationToken, CancellationToken ct)
     {
         var user = await GetUserAsync(username, ct)
             ?? throw new KeyNotFoundException($"User '{username}' not found.");
 
         var rolename = DynsecConstants.Acl.RolePrefix + username;
-        var hasUserRole = user.Roles?.Any(r => string.Equals(r.Rolename, rolename, StringComparison.Ordinal)) == true;
-
-        if (!hasUserRole)
-            await CreateRoleAsync(rolename, username, ct);
-
         var roles = user.Roles?.Select(r => r.Rolename).ToList() ?? [];
-        if (!hasUserRole) roles.Add(rolename);
+
+        if (!roles.Contains(rolename, StringComparer.Ordinal))
+        {
+            await DeleteRoleIfExistsAsync(rolename, ct);
+            await CreateRoleAsync(rolename, username, ct);
+            roles.Add(rolename);
+        }
 
         var command = new DynsecCommand
         {
             Command = DynsecConstants.Commands.ModifyClient,
             Username = username,
-            TextDescription = string.Empty,
             Disabled = false,
             Roles = roles.Select(r => new DynsecRoleRef { Rolename = r }).ToList()
         };
+        if (clearVerificationToken) command.TextDescription = string.Empty;
+
         var response = await SendCommandAsync(command, ct);
         ThrowOnError(response, username);
     }

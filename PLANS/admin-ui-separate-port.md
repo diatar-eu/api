@@ -371,3 +371,28 @@ módosított lejár / hibás aláírás / másik titok), a rate limit IP-nként 
 viselkedés egy `/tmp` alatt futó ideiglenes harnessszel lett ellenőrizve (a repóhoz nem
 került tesztprojekt). End-to-end egy ugyanazzal a titokkal aláírt sütivel: `/admin` a
 dashboardot adja, az API 401 helyett 503-at (broker nélkül), hamis sütivel 401.
+
+**A megerősítés és a szerep külön életciklus.** A dynsec regisztrációkor még nem
+ad szerepet: a kliens `disabled=true`, a `textDescription` a megerősítő token. A
+szerep (`s-<username>`) csak a megerősítéskor jön létre, egy `ModifyClient`
+mellett, ami a token-t üresre cseréli. Ezért a `ForceVerifyAsync` (admin UI) és az
+önműködő e-mailes kivétel egyformán az `ActivateAsync`-t hívja, és a
+`SetEnabledAsync` ugyanezt teszi a token megőrzésével – így a "visszakapcsolom"
+művelet sem hagyhat felhasználót szerep nélkül.
+
+**A `ModifyClient` felülírja a szerep-listát**, nem csak hozzáad: ezért a
+`modifyClient` parancs mindig a teljes `Roles` tömböt kapja. A `ForceVerifyAsync`
+nem piszkálja a már megfelelő szerepet, és a `SetEnabledAsync` sem hoz létre
+duplikátumot.
+
+**A megerősítetlen felhasználó a UI-ban is diatar user.** A `IsDiatarUser()` a
+`HasUserRole()` és a `HasPendingVerification()` (letiltott + token a
+`textDescription`-ben) diszjunkciója, különben a tokenre váró, szerep nélküli user
+„MQTT kliens"-ként jelent meg. A publikus `GET /api/v1/users/list` viszont
+szándékosan továbbra is csak a szereppel rendelkezőket listázza, mert az
+elfogadott `publish` jog csak azoknak van.
+
+**A gombok státusz szerinti megjelenése** (`admin.js`): `verify` csak `pending`
+státusznál, `enable` csak `disabled`nél, `disable` csak `verified`nél, `resend`
+pedig `pending` + email esetén. A szerep nélküli pending user role-cella helyett
+`-` jelet mutat.
